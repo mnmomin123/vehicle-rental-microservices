@@ -1,24 +1,32 @@
 from flask import Flask, request, jsonify
 import sqlite3
+import requests
 
 app = Flask(__name__)
 
 DATABASE = "vehicle.db"
 
+# ==============================
+# SERVICE REGISTRY CONFIG
+# ==============================
 
-# =========================
-# DATABASE CONNECTION
-# =========================
+REGISTRY_URL = "http://localhost:5005"
+SERVICE_NAME = "vehicle-service"
+SERVICE_URL = "http://localhost:5002"
+
+
+# ==============================
+# DATABASE
+# ==============================
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(
+        DATABASE,
+        timeout=10
+    )
     conn.row_factory = sqlite3.Row
     return conn
 
-
-# =========================
-# DATABASE INITIALIZATION
-# =========================
 
 def init_db():
     conn = get_db_connection()
@@ -27,7 +35,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS vehicles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            vehicle_number TEXT NOT NULL UNIQUE,
+            vehicle_number TEXT UNIQUE NOT NULL,
             vehicle_type TEXT NOT NULL,
             price_per_day REAL NOT NULL,
             status TEXT NOT NULL DEFAULT 'AVAILABLE'
@@ -38,9 +46,30 @@ def init_db():
     conn.close()
 
 
-# =========================
+# ==============================
+# AUTOMATIC SERVICE REGISTRATION
+# ==============================
+
+def register_with_registry():
+    try:
+        response = requests.post(
+            f"{REGISTRY_URL}/register",
+            json={
+                "service_name": SERVICE_NAME,
+                "service_url": SERVICE_URL
+            },
+            timeout=3
+        )
+
+        print("Vehicle Service Registration:", response.json())
+
+    except requests.RequestException as error:
+        print("Vehicle Service Registration Failed:", error)
+
+
+# ==============================
 # HEALTH CHECK
-# =========================
+# ==============================
 
 @app.route("/health", methods=["GET"])
 def health():
@@ -50,12 +79,13 @@ def health():
     })
 
 
-# =========================
-# GET ALL VEHICLES
-# =========================
+# ==============================
+# V1 - GET ALL VEHICLES
+# ==============================
 
 @app.route("/api/v1/vehicles", methods=["GET"])
 def get_vehicles():
+
     conn = get_db_connection()
 
     vehicles = conn.execute(
@@ -64,17 +94,16 @@ def get_vehicles():
 
     conn.close()
 
-    return jsonify([
-        dict(vehicle) for vehicle in vehicles
-    ])
+    return jsonify([dict(vehicle) for vehicle in vehicles])
 
 
-# =========================
-# GET VEHICLE BY ID
-# =========================
+# ==============================
+# V1 - GET VEHICLE BY ID
+# ==============================
 
 @app.route("/api/v1/vehicles/<int:vehicle_id>", methods=["GET"])
 def get_vehicle(vehicle_id):
+
     conn = get_db_connection()
 
     vehicle = conn.execute(
@@ -92,12 +121,13 @@ def get_vehicle(vehicle_id):
     return jsonify(dict(vehicle))
 
 
-# =========================
-# CREATE VEHICLE
-# =========================
+# ==============================
+# V1 - CREATE VEHICLE
+# ==============================
 
 @app.route("/api/v1/vehicles", methods=["POST"])
 def create_vehicle():
+
     data = request.get_json()
 
     if not data:
@@ -105,32 +135,47 @@ def create_vehicle():
             "error": "Request body is required"
         }), 400
 
-    name = data.get("name")
-    vehicle_number = data.get("vehicle_number")
-    vehicle_type = data.get("vehicle_type")
-    price_per_day = data.get("price_per_day")
+    required_fields = [
+        "name",
+        "vehicle_number",
+        "vehicle_type",
+        "price_per_day"
+    ]
 
-    if not name or not vehicle_number or not vehicle_type or price_per_day is None:
+    for field in required_fields:
+        if field not in data:
+            return jsonify({
+                "error": f"{field} is required"
+            }), 400
+
+    status = data.get("status", "AVAILABLE")
+
+    if status not in ["AVAILABLE", "RESERVED", "MAINTENANCE"]:
         return jsonify({
-            "error": "name, vehicle_number, vehicle_type and price_per_day are required"
+            "error": "Invalid vehicle status"
         }), 400
 
-    conn = get_db_connection()
-
     try:
-        cursor = conn.execute(
-            """
+
+        conn = get_db_connection()
+
+        cursor = conn.execute("""
             INSERT INTO vehicles
-            (name, vehicle_number, vehicle_type, price_per_day, status)
-            VALUES (?, ?, ?, ?, 'AVAILABLE')
-            """,
             (
                 name,
                 vehicle_number,
                 vehicle_type,
-                price_per_day
+                price_per_day,
+                status
             )
-        )
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            data["name"],
+            data["vehicle_number"],
+            data["vehicle_type"],
+            data["price_per_day"],
+            status
+        ))
 
         conn.commit()
 
@@ -141,23 +186,27 @@ def create_vehicle():
             (vehicle_id,)
         ).fetchone()
 
-        return jsonify(dict(vehicle)), 201
+        conn.close()
+
+        return jsonify({
+            "message": "Vehicle created successfully",
+            "vehicle": dict(vehicle)
+        }), 201
 
     except sqlite3.IntegrityError:
+
         return jsonify({
             "error": "Vehicle number already exists"
         }), 409
 
-    finally:
-        conn.close()
 
-
-# =========================
-# UPDATE VEHICLE
-# =========================
+# ==============================
+# V1 - UPDATE VEHICLE
+# ==============================
 
 @app.route("/api/v1/vehicles/<int:vehicle_id>", methods=["PUT"])
 def update_vehicle(vehicle_id):
+
     data = request.get_json()
 
     if not data:
@@ -165,87 +214,95 @@ def update_vehicle(vehicle_id):
             "error": "Request body is required"
         }), 400
 
-    name = data.get("name")
-    vehicle_number = data.get("vehicle_number")
-    vehicle_type = data.get("vehicle_type")
-    price_per_day = data.get("price_per_day")
-    status = data.get("status")
-
-    if (
-        not name
-        or not vehicle_number
-        or not vehicle_type
-        or price_per_day is None
-        or not status
-    ):
-        return jsonify({
-            "error": "name, vehicle_number, vehicle_type, price_per_day and status are required"
-        }), 400
-
-    if status not in ["AVAILABLE", "RESERVED", "MAINTENANCE"]:
-        return jsonify({
-            "error": "Invalid status"
-        }), 400
-
     conn = get_db_connection()
 
-    existing_vehicle = conn.execute(
+    vehicle = conn.execute(
         "SELECT * FROM vehicles WHERE id = ?",
         (vehicle_id,)
     ).fetchone()
 
-    if existing_vehicle is None:
+    if vehicle is None:
         conn.close()
 
         return jsonify({
             "error": "Vehicle not found"
         }), 404
 
+    name = data.get("name", vehicle["name"])
+    vehicle_number = data.get(
+        "vehicle_number",
+        vehicle["vehicle_number"]
+    )
+    vehicle_type = data.get(
+        "vehicle_type",
+        vehicle["vehicle_type"]
+    )
+    price_per_day = data.get(
+        "price_per_day",
+        vehicle["price_per_day"]
+    )
+    status = data.get(
+        "status",
+        vehicle["status"]
+    )
+
+    if status not in ["AVAILABLE", "RESERVED", "MAINTENANCE"]:
+        conn.close()
+
+        return jsonify({
+            "error": "Invalid vehicle status"
+        }), 400
+
     try:
-        conn.execute(
-            """
+
+        conn.execute("""
             UPDATE vehicles
-            SET name = ?,
+            SET
+                name = ?,
                 vehicle_number = ?,
                 vehicle_type = ?,
                 price_per_day = ?,
                 status = ?
             WHERE id = ?
-            """,
-            (
-                name,
-                vehicle_number,
-                vehicle_type,
-                price_per_day,
-                status,
-                vehicle_id
-            )
-        )
+        """, (
+            name,
+            vehicle_number,
+            vehicle_type,
+            price_per_day,
+            status,
+            vehicle_id
+        ))
 
         conn.commit()
 
-        vehicle = conn.execute(
+        updated_vehicle = conn.execute(
             "SELECT * FROM vehicles WHERE id = ?",
             (vehicle_id,)
         ).fetchone()
 
-        return jsonify(dict(vehicle))
+        conn.close()
+
+        return jsonify({
+            "message": "Vehicle updated successfully",
+            "vehicle": dict(updated_vehicle)
+        })
 
     except sqlite3.IntegrityError:
+
+        conn.close()
+
         return jsonify({
             "error": "Vehicle number already exists"
         }), 409
 
-    finally:
-        conn.close()
 
-
-# =========================
-# DELETE VEHICLE
-# =========================
+# ==============================
+# V1 - DELETE VEHICLE
+# ==============================
 
 @app.route("/api/v1/vehicles/<int:vehicle_id>", methods=["DELETE"])
 def delete_vehicle(vehicle_id):
+
     conn = get_db_connection()
 
     vehicle = conn.execute(
@@ -273,12 +330,16 @@ def delete_vehicle(vehicle_id):
     })
 
 
-# =========================
+# ==============================
 # RESERVE VEHICLE
-# =========================
+# ==============================
 
-@app.route("/api/v1/vehicles/<int:vehicle_id>/reserve", methods=["PUT"])
+@app.route(
+    "/api/v1/vehicles/<int:vehicle_id>/reserve",
+    methods=["PUT"]
+)
 def reserve_vehicle(vehicle_id):
+
     conn = get_db_connection()
 
     vehicle = conn.execute(
@@ -294,6 +355,7 @@ def reserve_vehicle(vehicle_id):
         }), 404
 
     if vehicle["status"] != "AVAILABLE":
+
         conn.close()
 
         return jsonify({
@@ -301,18 +363,15 @@ def reserve_vehicle(vehicle_id):
             "status": vehicle["status"]
         }), 409
 
-    conn.execute(
-        """
+    conn.execute("""
         UPDATE vehicles
         SET status = 'RESERVED'
         WHERE id = ?
-        """,
-        (vehicle_id,)
-    )
+    """, (vehicle_id,))
 
     conn.commit()
 
-    vehicle = conn.execute(
+    updated_vehicle = conn.execute(
         "SELECT * FROM vehicles WHERE id = ?",
         (vehicle_id,)
     ).fetchone()
@@ -321,16 +380,20 @@ def reserve_vehicle(vehicle_id):
 
     return jsonify({
         "message": "Vehicle reserved successfully",
-        "vehicle": dict(vehicle)
+        "vehicle": dict(updated_vehicle)
     })
 
 
-# =========================
+# ==============================
 # RELEASE VEHICLE
-# =========================
+# ==============================
 
-@app.route("/api/v1/vehicles/<int:vehicle_id>/release", methods=["PUT"])
+@app.route(
+    "/api/v1/vehicles/<int:vehicle_id>/release",
+    methods=["PUT"]
+)
 def release_vehicle(vehicle_id):
+
     conn = get_db_connection()
 
     vehicle = conn.execute(
@@ -345,18 +408,15 @@ def release_vehicle(vehicle_id):
             "error": "Vehicle not found"
         }), 404
 
-    conn.execute(
-        """
+    conn.execute("""
         UPDATE vehicles
         SET status = 'AVAILABLE'
         WHERE id = ?
-        """,
-        (vehicle_id,)
-    )
+    """, (vehicle_id,))
 
     conn.commit()
 
-    vehicle = conn.execute(
+    updated_vehicle = conn.execute(
         "SELECT * FROM vehicles WHERE id = ?",
         (vehicle_id,)
     ).fetchone()
@@ -365,13 +425,13 @@ def release_vehicle(vehicle_id):
 
     return jsonify({
         "message": "Vehicle released successfully",
-        "vehicle": dict(vehicle)
+        "vehicle": dict(updated_vehicle)
     })
 
 
-# =========================
-# API V2 - VEHICLES
-# =========================
+# ==============================
+# V2 - GET ALL VEHICLES
+# ==============================
 
 @app.route("/api/v2/vehicles", methods=["GET"])
 def get_vehicles_v2():
@@ -387,8 +447,10 @@ def get_vehicles_v2():
     vehicle_list = []
 
     for vehicle in vehicles:
+
         vehicle_data = dict(vehicle)
 
+        # V2 field
         vehicle_data["daily_rate"] = vehicle_data["price_per_day"]
 
         vehicle_list.append(vehicle_data)
@@ -400,7 +462,14 @@ def get_vehicles_v2():
     })
 
 
-@app.route("/api/v2/vehicles/<int:vehicle_id>", methods=["GET"])
+# ==============================
+# V2 - GET VEHICLE BY ID
+# ==============================
+
+@app.route(
+    "/api/v2/vehicles/<int:vehicle_id>",
+    methods=["GET"]
+)
 def get_vehicle_v2(vehicle_id):
 
     conn = get_db_connection()
@@ -413,6 +482,7 @@ def get_vehicle_v2(vehicle_id):
     conn.close()
 
     if vehicle is None:
+
         return jsonify({
             "error": "Vehicle not found"
         }), 404
@@ -427,11 +497,14 @@ def get_vehicle_v2(vehicle_id):
     })
 
 
-# =========================
-# API V2 - VEHICLE SUMMARY
-# =========================
+# ==============================
+# V2 - VEHICLE SUMMARY
+# ==============================
 
-@app.route("/api/v2/vehicles/<int:vehicle_id>/summary", methods=["GET"])
+@app.route(
+    "/api/v2/vehicles/<int:vehicle_id>/summary",
+    methods=["GET"]
+)
 def vehicle_summary_v2(vehicle_id):
 
     conn = get_db_connection()
@@ -444,6 +517,7 @@ def vehicle_summary_v2(vehicle_id):
     conn.close()
 
     if vehicle is None:
+
         return jsonify({
             "error": "Vehicle not found"
         }), 404
@@ -460,21 +534,20 @@ def vehicle_summary_v2(vehicle_id):
         "availability": vehicle_data["status"]
     })
 
-# =========================
+
+# ==============================
 # START SERVICE
-# =========================
+# ==============================
 
 if __name__ == "__main__":
+
     init_db()
+
+    # Automatically register with Service Registry
+    register_with_registry()
 
     app.run(
         host="0.0.0.0",
         port=5002,
         debug=True
     )
-
-# GET     /api/v1/vehicles
-# POST    /api/v1/vehicles
-# GET     /api/v1/vehicles/1
-# PUT     /api/v1/vehicles/1
-# DELETE  /api/v1/vehicles/1

@@ -1,0 +1,1011 @@
+{
+  "info": {
+    "_postman_id": "7f3d4c91-8a4d-4d2d-b6e1-vehicle-rental-auto",
+    "name": "Vehicle Rental System - Microservices - Auto Test",
+    "description": "Fully automated Postman collection for Vehicle Rental System Microservices Mini Project",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "gateway_url",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "user_url",
+      "value": "http://localhost:5001"
+    },
+    {
+      "key": "vehicle_url",
+      "value": "http://localhost:5002"
+    },
+    {
+      "key": "booking_url",
+      "value": "http://localhost:5003"
+    },
+    {
+      "key": "payment_url",
+      "value": "http://localhost:5004"
+    },
+    {
+      "key": "registry_url",
+      "value": "http://localhost:5005"
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "vehicle_id",
+      "value": ""
+    },
+    {
+      "key": "booking_id",
+      "value": ""
+    },
+    {
+      "key": "payment_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Service Registry",
+      "item": [
+        {
+          "name": "Registry Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{registry_url}}/health",
+              "host": [
+                "{{registry_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "All Registered Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{registry_url}}/services",
+              "host": [
+                "{{registry_url}}"
+              ],
+              "path": [
+                "services"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Discover User Service",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{registry_url}}/services/user-service",
+              "host": [
+                "{{registry_url}}"
+              ],
+              "path": [
+                "services",
+                "user-service"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Discover Vehicle Service",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{registry_url}}/services/vehicle-service",
+              "host": [
+                "{{registry_url}}"
+              ],
+              "path": [
+                "services",
+                "vehicle-service"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Discover Booking Service",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{registry_url}}/services/booking-service",
+              "host": [
+                "{{registry_url}}"
+              ],
+              "path": [
+                "services",
+                "booking-service"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Discover Payment Service",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{registry_url}}/services/payment-service",
+              "host": [
+                "{{registry_url}}"
+              ],
+              "path": [
+                "services",
+                "payment-service"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - User Service",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{user_url}}/api/v1/users",
+              "host": [
+                "{{user_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{user_url}}/api/v1/users/{{user_id}}",
+              "host": [
+                "{{user_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{user_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create User Automatically",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Auto Test User {{$timestamp}}\",\n    \"email\": \"autotest{{$timestamp}}@example.com\",\n    \"phone\": \"9{{$randomInt}}{{$randomInt}}\"\n}"
+            },
+            "url": {
+              "raw": "{{user_url}}/api/v1/users",
+              "host": [
+                "{{user_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"User created successfully\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "let data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"user_id\", data.id);",
+                  "    console.log(\"Saved user_id:\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Current User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Auto Test User\",\n    \"email\": \"updated{{$timestamp}}@example.com\",\n    \"phone\": \"8888888888\"\n}"
+            },
+            "url": {
+              "raw": "{{user_url}}/api/v1/users/{{user_id}}",
+              "host": [
+                "{{user_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{user_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Vehicle Service",
+      "item": [
+        {
+          "name": "Get All Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{vehicle_url}}/api/v1/vehicles",
+              "host": [
+                "{{vehicle_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Vehicle Automatically",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Maruti Ertiga {{$timestamp}}\",\n    \"vehicle_number\": \"KA{{randomInt 10 99}}AB{{$randomInt}}\",\n    \"vehicle_type\": \"MPV\",\n    \"price_per_day\": 2200\n}"
+            },
+            "url": {
+              "raw": "{{vehicle_url}}/api/v1/vehicles",
+              "host": [
+                "{{vehicle_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Vehicle created successfully\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "let data = pm.response.json();",
+                  "let vehicle = data.vehicle || data;",
+                  "",
+                  "if (vehicle.id) {",
+                  "    pm.collectionVariables.set(\"vehicle_id\", vehicle.id);",
+                  "    console.log(\"Saved vehicle_id:\", vehicle.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current Vehicle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{vehicle_url}}/api/v1/vehicles/{{vehicle_id}}",
+              "host": [
+                "{{vehicle_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "{{vehicle_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Current Vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Maruti Ertiga Updated\",\n    \"vehicle_number\": \"KA04GH{{$randomInt}}\",\n    \"vehicle_type\": \"MPV\",\n    \"price_per_day\": 2500,\n    \"status\": \"AVAILABLE\"\n}"
+            },
+            "url": {
+              "raw": "{{vehicle_url}}/api/v1/vehicles/{{vehicle_id}}",
+              "host": [
+                "{{vehicle_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "{{vehicle_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reserve Current Vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{vehicle_url}}/api/v1/vehicles/{{vehicle_id}}/reserve",
+              "host": [
+                "{{vehicle_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "{{vehicle_id}}",
+                "reserve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Release Current Vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{vehicle_url}}/api/v1/vehicles/{{vehicle_id}}/release",
+              "host": [
+                "{{vehicle_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "{{vehicle_id}}",
+                "release"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Payment Service",
+      "item": [
+        {
+          "name": "Get All Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{payment_url}}/api/v1/payments",
+              "host": [
+                "{{payment_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Successful Mock Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"booking_id\": 999,\n    \"user_id\": {{user_id}},\n    \"amount\": 2500,\n    \"payment_status\": \"SUCCESS\"\n}"
+            },
+            "url": {
+              "raw": "{{payment_url}}/api/v1/payments",
+              "host": [
+                "{{payment_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Mock payment successful\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "let data = pm.response.json();",
+                  "if (data.id) {",
+                  "    pm.collectionVariables.set(\"payment_id\", data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Failed Mock Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"booking_id\": 1000,\n    \"user_id\": {{user_id}},\n    \"amount\": 2500,\n    \"payment_status\": \"FAILED\"\n}"
+            },
+            "url": {
+              "raw": "{{payment_url}}/api/v1/payments",
+              "host": [
+                "{{payment_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Booking Service",
+      "item": [
+        {
+          "name": "Get All Bookings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Successful Booking - Saga",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": {{user_id}},\n    \"vehicle_id\": {{vehicle_id}},\n    \"start_date\": \"2026-09-29\",\n    \"end_date\": \"2026-10-01\",\n    \"payment_status\": \"SUCCESS\"\n}"
+            },
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Booking created successfully\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "let data = pm.response.json();",
+                  "let booking = data.booking || data;",
+                  "",
+                  "if (booking.id) {",
+                  "    pm.collectionVariables.set(\"booking_id\", booking.id);",
+                  "    console.log(\"Saved booking_id:\", booking.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current Booking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings/{{booking_id}}",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "{{booking_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Failed Booking - Saga Compensation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": {{user_id}},\n    \"vehicle_id\": {{vehicle_id}},\n    \"start_date\": \"2026-10-05\",\n    \"end_date\": \"2026-10-07\",\n    \"payment_status\": \"FAILED\"\n}"
+            },
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Circuit Breaker Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings/circuit-breaker",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "circuit-breaker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - API Gateway",
+      "item": [
+        {
+          "name": "Gateway Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/health",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Users Through Gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/users",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Vehicles Through Gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/vehicles",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Bookings Through Gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/bookings",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Payments Through Gateway",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/payments",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Booking Through Gateway",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": {{user_id}},\n    \"vehicle_id\": {{vehicle_id}},\n    \"start_date\": \"2026-10-10\",\n    \"end_date\": \"2026-10-12\",\n    \"payment_status\": \"SUCCESS\"\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/bookings",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - API Versioning",
+      "item": [
+        {
+          "name": "V1 - Get Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v1/vehicles",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"V1 vehicle API works\", function () {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V2 - Get Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v2/vehicles",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "vehicles"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"V2 vehicle API works\", function () {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "V2 - Get Vehicle By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v2/vehicles/{{vehicle_id}}",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "vehicles",
+                "{{vehicle_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "V2 - Vehicle Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/api/v2/vehicles/{{vehicle_id}}/summary",
+              "host": [
+                "{{gateway_url}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "vehicles",
+                "{{vehicle_id}}",
+                "summary"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Circuit Breaker",
+      "item": [
+        {
+          "name": "Check Circuit Breaker Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings/circuit-breaker",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "circuit-breaker"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Booking Request - Circuit Breaker Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": {{user_id}},\n    \"vehicle_id\": {{vehicle_id}},\n    \"start_date\": \"2026-10-15\",\n    \"end_date\": \"2026-10-17\",\n    \"payment_status\": \"SUCCESS\"\n}"
+            },
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Saga Testing",
+      "item": [
+        {
+          "name": "Saga - Successful Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": {{user_id}},\n    \"vehicle_id\": {{vehicle_id}},\n    \"start_date\": \"2026-11-01\",\n    \"end_date\": \"2026-11-03\",\n    \"payment_status\": \"SUCCESS\"\n}"
+            },
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Saga - Failed Payment Compensation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"user_id\": {{user_id}},\n    \"vehicle_id\": {{vehicle_id}},\n    \"start_date\": \"2026-11-05\",\n    \"end_date\": \"2026-11-07\",\n    \"payment_status\": \"FAILED\"\n}"
+            },
+            "url": {
+              "raw": "{{booking_url}}/api/v1/bookings",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Vehicle Released",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{vehicle_url}}/api/v1/vehicles/{{vehicle_id}}",
+              "host": [
+                "{{vehicle_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "vehicles",
+                "{{vehicle_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

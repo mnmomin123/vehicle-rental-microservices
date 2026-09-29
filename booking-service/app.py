@@ -24,7 +24,13 @@ app = Flask(__name__)
 
 DATABASE = "booking.db"
 
+# =========================
+# SERVICE REGISTRY
+# =========================
+
 REGISTRY_URL = "http://localhost:5005"
+SERVICE_NAME = "booking-service"
+SERVICE_URL = "http://localhost:5003"
 
 
 # =========================
@@ -69,6 +75,27 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+
+# =========================
+# SERVICE REGISTRATION
+# =========================
+
+def register_with_registry():
+    try:
+        response = requests.post(
+            f"{REGISTRY_URL}/register",
+            json={
+                "service_name": SERVICE_NAME,
+                "service_url": SERVICE_URL
+            },
+            timeout=3
+        )
+
+        print("Booking Service Registration:", response.json())
+
+    except requests.RequestException as error:
+        print("Booking Service Registration Failed:", error)
 
 
 # =========================
@@ -604,8 +631,13 @@ def create_booking():
 
 if __name__ == "__main__":
 
+    # Initialize database
     init_db()
 
+    # Register service with Service Registry
+    register_with_registry()
+
+    # Start Flask service
     app.run(
         host="0.0.0.0",
         port=5003,

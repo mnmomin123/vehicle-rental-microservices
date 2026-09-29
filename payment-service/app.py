@@ -1,10 +1,20 @@
 from flask import Flask, request, jsonify
 import sqlite3
 from datetime import datetime
+import requests
 
 app = Flask(__name__)
 
 DATABASE = "payment.db"
+
+
+# =========================
+# SERVICE REGISTRY
+# =========================
+
+REGISTRY_URL = "http://localhost:5005"
+SERVICE_NAME = "payment-service"
+SERVICE_URL = "http://localhost:5004"
 
 
 # =========================
@@ -37,6 +47,27 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+
+# =========================
+# SERVICE REGISTRATION
+# =========================
+
+def register_with_registry():
+    try:
+        response = requests.post(
+            f"{REGISTRY_URL}/register",
+            json={
+                "service_name": SERVICE_NAME,
+                "service_url": SERVICE_URL
+            },
+            timeout=3
+        )
+
+        print("Payment Service Registration:", response.json())
+
+    except requests.RequestException as error:
+        print("Payment Service Registration Failed:", error)
 
 
 # =========================
@@ -178,8 +209,14 @@ def get_payment(payment_id):
 # =========================
 
 if __name__ == "__main__":
+
+    # Initialize database
     init_db()
 
+    # Register service with Service Registry
+    register_with_registry()
+
+    # Start Flask service
     app.run(
         host="0.0.0.0",
         port=5004,
